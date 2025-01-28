@@ -12,7 +12,6 @@ if (keystorePropertiesFile.exists()) {
 }
 
 
-
 android {
     namespace = "com.nxs.mockapi"
     compileSdk = flutter.compileSdkVersion

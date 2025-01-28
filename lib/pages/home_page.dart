@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockapi/models/item_model.dart';
 import 'package:mockapi/models/item_model_data.dart';
 import 'package:mockapi/viewmodel/item_view_model.dart';
+import 'package:mockapi/viewmodel/theme_view_model.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -22,12 +23,15 @@ class _HomePageState extends ConsumerState<HomePage> {
   final TextEditingController searchController = TextEditingController();
 
   final List<GlobalKey> itemKeys = [];
+  late final GlobalKey searchKey = GlobalKey();
+  late double? searchKeyHeight = MediaQuery.of(context).size.height * 0.075;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollController.jumpTo((scrollController.position.extentTotal / initialResCount) * 10);
+      searchKeyHeight = searchKey.currentContext?.size?.height;
     });
   }
 
@@ -68,8 +72,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     itemViewModel = ref.watch(itemViewModelProvider.notifier);
     itemModelData = ref.watch(itemViewModelProvider);
 
+    final themeMode = ref.watch(themeViewModelProvider);
+    final themeViewModel = ref.watch(themeViewModelProvider.notifier);
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade700,
+      backgroundColor: themeMode.name == "light" ? Colors.grey : Colors.grey.shade700,
       body: NotificationListener(
         onNotification: (notification) {
           if (notification is ScrollNotification) {
@@ -99,10 +106,36 @@ class _HomePageState extends ConsumerState<HomePage> {
               children: [
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 10.0),
-                  child: searchWidget(context),
+                  child: Row(
+                    children: [
+                      Expanded(key: searchKey, flex: 6, child: searchWidget(context, themeMode.name)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            themeViewModel.toggleTheme();
+                            debugPrint(themeMode.toString());
+                          },
+                          child: Container(
+                            height: searchKeyHeight! - 15,
+                            decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: themeMode.name == "light" ? Colors.white : Colors.grey.shade800),
+                                borderRadius: BorderRadius.circular(20),
+                                color: themeMode.name == "light" ? Colors.grey.shade400 : Colors.grey.shade700),
+                            child: Icon(
+                              themeMode.name == "light" ? Icons.light_mode : Icons.dark_mode,
+                              color: themeMode.name == "light" ? Colors.white : Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Expanded(
-                  child: itemWidget(context),
+                  child: itemWidget(context, themeMode.name),
                 ),
               ],
             ),
@@ -112,7 +145,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget searchWidget(BuildContext context) {
+  Widget searchWidget(BuildContext context, String mode) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 5),
       child: TextFormField(
@@ -122,15 +155,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           // await itemViewModel.searchItems(value);
         },
         decoration: InputDecoration(
-          fillColor: Colors.grey.shade300,
+          fillColor: mode == "light" ? Colors.grey.shade300 : Colors.grey.shade700,
           filled: true,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25),
-            borderSide: BorderSide(color: Colors.white),
+            borderSide: BorderSide(color: mode == "light" ? Colors.white : Colors.grey.shade800),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25),
-            borderSide: BorderSide(color: Colors.white),
+            borderSide: BorderSide(color: mode == "light" ? Colors.white : Colors.grey.shade800),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25),
@@ -148,7 +181,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget itemWidget(BuildContext context) {
+  Widget itemWidget(BuildContext context, String mode) {
     return ListView.builder(
       controller: scrollController,
       itemCount: itemModelData.itemModel?.data.length ?? 50,
@@ -158,18 +191,18 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
         final data = itemModelData.itemModel == null ? null : itemModelData.itemModel!.data[index];
 
-        return itemTile(context, data, itemKeys[index]);
+        return itemTile(context, data, itemKeys[index], mode);
       },
     );
   }
 
-  Widget itemTile(BuildContext context, Data? data, GlobalKey key) {
+  Widget itemTile(BuildContext context, Data? data, GlobalKey key, String mode) {
     return Padding(
       key: key,
       padding: EdgeInsets.symmetric(horizontal: 0, vertical: 5.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: mode == "light" ? Colors.white : Colors.grey.shade800,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Skeletonizer(
